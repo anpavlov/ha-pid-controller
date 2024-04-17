@@ -51,6 +51,7 @@ PLATFORM_SCHEMA = vol.All(
             vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
             vol.Optional(CONF_UNIQUE_ID): cv.string,
             vol.Required(CONF_SETPOINT): cv.template,
+            vol.Required(CONF_SETPOINT): cv.template,
             vol.Optional(CONF_PROPORTIONAL, default=0): cv.template,
             vol.Optional(CONF_INTEGRAL, default=0): cv.template,
             vol.Optional(CONF_DERIVATIVE, default=0): cv.template,
@@ -59,6 +60,8 @@ PLATFORM_SCHEMA = vol.All(
             vol.Optional(CONF_PRECISION, default=DEFAULT_PRECISION): cv.template,
             vol.Optional(CONF_MINIMUM, default=DEFAULT_MINIMUM): cv.template,
             vol.Optional(CONF_MAXIMUM, default=DEFAULT_MAXIMUM): cv.template,
+            vol.Optional(CONF_PID_MINIMUM, default=DEFAULT_PID_MINIMUM): cv.template,
+            vol.Optional(CONF_PID_MAXIMUM, default=DEFAULT_PID_MAXIMUM): cv.template,
             vol.Optional(CONF_ROUND, default=DEFAULT_ROUND): cv.template,
             vol.Optional(CONF_SAMPLE_TIME, default=DEFAULT_SAMPLE_TIME): cv.template,
             vol.Optional(CONF_WINDUP, default=DEFAULT_WINDUP): cv.template,
@@ -85,6 +88,8 @@ async def async_setup_platform(
     precision = config.get(CONF_PRECISION)
     minimum = config.get(CONF_MINIMUM)
     maximum = config.get(CONF_MAXIMUM)
+    pid_minimum = config.get(CONF_PID_MINIMUM)
+    pid_maximum = config.get(CONF_PID_MAXIMUM)
     round_type = config.get(CONF_ROUND)
     sample_time = config.get(CONF_SAMPLE_TIME)
     windup = config.get(CONF_WINDUP)
@@ -104,6 +109,8 @@ async def async_setup_platform(
         precision,
         minimum,
         maximum,
+        pid_minimum,
+        pid_maximum,
         round_type,
         device_class,
     ]:
@@ -130,6 +137,8 @@ async def async_setup_platform(
                 invert,
                 minimum,
                 maximum,
+                pid_minimum,
+                pid_maximum,
                 round_type,
                 precision,
                 config.get(CONF_ENTITY_ID),
@@ -160,6 +169,8 @@ class PidController(SensorEntity):
         invert,
         minimum,
         maximum,
+        pid_minimum,
+        pid_maximum,
         round_type,
         precision,
         entity_id,
@@ -181,6 +192,8 @@ class PidController(SensorEntity):
         self._invert_template = invert
         self._minimum_template = minimum
         self._maximum_template = maximum
+        self._pid_minimum_template = pid_minimum
+        self._pid_maximum_template = pid_maximum
         self._round_template = round_type
         self._precision_template = precision
         self._entities = []
@@ -523,6 +536,46 @@ class PidController(SensorEntity):
         return DEFAULT_MAXIMUM
 
     @property
+    def pid_minimum(self) -> float:
+        """Returns PID Minimum"""
+
+        if self._pid_minimum_template is not None:
+            try:
+                pid_minimum = self._pid_minimum_template.async_render(parse_result=False)
+            except (TemplateError, TypeError) as ex:
+                self.show_template_exception(ex, CONF_PID_MINIMUM)
+                return float(DEFAULT_PID_MINIMUM)
+
+            try:
+                pid_minimum = float(pid_minimum)
+            except ValueError:
+                pid_minimum = float(DEFAULT_PID_MINIMUM)
+
+            return pid_minimum
+
+        return DEFAULT_PID_MINIMUM
+
+    @property
+    def pid_maximum(self) -> float:
+        """Returns PID Maximum"""
+
+        if self._pid_maximum_template is not None:
+            try:
+                pid_maximum = self._pid_maximum_template.async_render(parse_result=False)
+            except (TemplateError, TypeError) as ex:
+                self.show_template_exception(ex, CONF_PID_MAXIMUM)
+                return float(DEFAULT_PID_MAXIMUM)
+
+            try:
+                pid_maximum = float(pid_maximum)
+            except ValueError:
+                pid_maximum = float(DEFAULT_PID_MAXIMUM)
+
+            return pid_maximum
+
+        return DEFAULT_PID_MAXIMUM
+
+    @property
     def round(self) -> str:
         """Returns Round Type"""
 
@@ -726,6 +779,24 @@ class PidController(SensorEntity):
                 self._entities += info.entities
                 self._force_update += info.entities
 
+        if self._pid_minimum_template is not None:
+            try:
+                info = self._pid_minimum_template.async_render_to_info()
+            except (TemplateError, TypeError) as ex:
+                self.show_template_exception(ex, CONF_PID_MINIMUM)
+            else:
+                self._entities += info.entities
+                self._force_update += info.entities
+
+        if self._pid_maximum_template is not None:
+            try:
+                info = self._pid_maximum_template.async_render_to_info()
+            except (TemplateError, TypeError) as ex:
+                self.show_template_exception(ex, CONF_PID_MAXIMUM)
+            else:
+                self._entities += info.entities
+                self._force_update += info.entities
+
         if self._round_template is not None:
             try:
                 info = self._round_template.async_render_to_info()
@@ -792,6 +863,12 @@ class PidController(SensorEntity):
 
             if self.windup != self._pid.windup:
                 self._pid.windup = self.windup
+
+            if self.pid_maximum != self._pid.pid_maximum:
+                self._pid.pid_maximum = self.pid_maximum
+
+            if self.pid_minimum != self._pid.pid_minimum:
+                self._pid.pid_minimum = self.pid_minimum
 
             if set_point != self._pid.set_point:
                 self.reset_pid()

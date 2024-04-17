@@ -33,6 +33,9 @@ class PIDController:
         self._i_term = 0.0
         self._d_term = 0.0
 
+        self._pid_minimum = 0
+        self._pid_maximum = 100
+
         self._sample_time = None
         self._last_output = None
         self._last_input = None
@@ -96,7 +99,7 @@ class PIDController:
 
         # Compute final output
         self._output = self._p_term + self._i_term + self._d_term
-        self._output = self.clamp_value(self._output, (0, 100))
+        self._output = self.clamp_value(self._output, (self._pid_minimum, self._pid_maximum))
 
         # Keep Track
         self._last_output = self._output
@@ -139,6 +142,24 @@ class PIDController:
     @set_point.setter
     def set_point(self, value):
         self._set_point = value
+
+    @property
+    def pid_maximum(self):
+        """PID maximum value"""
+        return self._pid_maximum
+
+    @pid_maximum.setter
+    def pid_maximum(self, value):
+        self._pid_maximum = value
+
+    @property
+    def pid_minimum(self):
+        """PID minimum value"""
+        return self._pid_minimum
+
+    @pid_minimum.setter
+    def pid_minimum(self, value):
+        self._pid_minimum = value
 
     @property
     def windup(self):
