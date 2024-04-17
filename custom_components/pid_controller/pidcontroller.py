@@ -88,11 +88,8 @@ class PIDController:
         self._p_term = self._kp * error
 
         # Calculate I and avoids Sturation
-        if self._last_output is None or (
-            self._last_output > 0 and self._last_output < 100
-        ):
-            self._i_term += self._ki * error * delta_time
-            self._i_term = self.clamp_value(self._i_term, self._windup)
+        self._i_term += self._ki * error * delta_time
+        self._i_term = self.clamp_value(self._i_term, self._windup)
 
         # Calculate D
         self._d_term = self._kd * delta_error / delta_time
