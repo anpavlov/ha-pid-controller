@@ -1,8 +1,6 @@
 {
     "name": "PID Controller",
-    "zip_release": true,
     "homeassistant": "2021.9",
     "render_readme": true,
-    "persistent_directory": "codes",
-    "filename": "pid_controller.zip"
+    "persistent_directory": "codes"
   }
